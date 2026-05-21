@@ -10,15 +10,20 @@ Use os arquivos em `examples/` como playground. Eles contêm bugs e código bagu
 
 ## Arquitetura do workflow
 
-O fluxo principal é o **pipeline de qualidade**, acionado por `/quality-check <arquivo>`. Ele encadeia três subagentes:
+O fluxo principal é o **pipeline de qualidade**, acionado por `/quality-check <arquivo>`. Ele encadeia três subagentes e **itera** até os testes passarem (máx 10 ciclos):
 
 ```
 /quality-check arquivo.py
     │
-    ├── code-reviewer    (Read, Grep, Glob, Bash)    → lista problemas
-    ├── code-fixer       (Read, Edit, Write)         → aplica correções
-    └── test-runner      (Read, Bash)                → valida com pytest
+    ├── ciclo N (até 10):
+    │     ├── code-reviewer    (Read, Grep, Glob, Bash)    → lista problemas
+    │     ├── code-fixer       (Read, Edit, Write)         → aplica correções
+    │     └── test-runner      (Read, Bash)                → valida com pytest
+    │
+    └── para quando: testes passam | 10 ciclos | lista estagnou | sem teste
 ```
+
+A partir do ciclo 2, o reviewer recebe o output das falhas do ciclo anterior pra focar no que ainda quebra.
 
 Princípios que regem essa estrutura — e que você deve preservar ao mexer:
 
@@ -30,7 +35,7 @@ Princípios que regem essa estrutura — e que você deve preservar ao mexer:
 
 | Comando | O que faz |
 |---------|-----------|
-| `/quality-check <arquivo>` | Pipeline completo: revisa → corrige → testa |
+| `/quality-check <arquivo>` | Pipeline completo: revisa → corrige → testa. Itera até passar (máx 10 ciclos). |
 | `/review <arquivo>` | Só revisa, não modifica nada |
 | `/explain <arquivo>` | Explica o código em português, sem mexer |
 | `/document <arquivo>` | Adiciona docstrings via `docs-writer` |
