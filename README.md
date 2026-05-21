@@ -25,13 +25,21 @@ Você vai ver o subagente `code-reviewer` ser disparado, analisar o arquivo e li
 
 Agora `code-reviewer` → `code-fixer` → `test-runner` rodam em sequência. Os bugs são corrigidos e validados com `pytest`.
 
+Se quiser rodar review+fix em **tudo que está sem commit** no repo, use:
+
+```
+/code-review
+```
+
+O subagente `change-scout` lista as mudanças, filtra ruído (binários, lockfiles, gerados) e o pipeline roda em cada arquivo restante.
+
 ## O que tem aqui
 
 ```
 .claude/
 ├── settings.json       # registra hooks
-├── agents/             # 4 subagentes especialistas
-├── commands/           # 4 slash commands
+├── agents/             # 5 subagentes especialistas
+├── commands/           # 5 slash commands
 ├── hooks/              # scripts de observabilidade
 └── logs/               # PostToolUse loga aqui
 examples/               # código com bugs/baguça pra praticar
@@ -42,7 +50,8 @@ CLAUDE.md               # contexto pro Claude Code
 
 | Comando | Efeito |
 |---|---|
-| `/quality-check <arquivo>` | Pipeline completo: revisa → corrige → testa |
+| `/quality-check <arquivo>` | Pipeline completo num arquivo: revisa → corrige → testa (itera até passar) |
+| `/code-review` | Descobre arquivos não comitados via `change-scout` e roda review + fix em cada |
 | `/review <arquivo>` | Só revisa, não modifica |
 | `/explain <arquivo>` | Explica em português |
 | `/document <arquivo>` | Adiciona docstrings |
