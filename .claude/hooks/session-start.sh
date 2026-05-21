@@ -11,6 +11,7 @@ CONTEXT=$(cat <<'EOF'
 
 Comandos disponíveis:
   /quality-check <arquivo>   pipeline: code-reviewer → code-fixer → test-runner
+  /code-review               descobre não comitados via change-scout e roda review+fix em cada
   /review <arquivo>          só revisa, não modifica
   /explain <arquivo>         explica em português
   /document <arquivo>        adiciona docstrings via docs-writer

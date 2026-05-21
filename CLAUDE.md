@@ -10,7 +10,11 @@ Use os arquivos em `examples/` como playground. Eles contêm bugs e código bagu
 
 ## Arquitetura do workflow
 
-O fluxo principal é o **pipeline de qualidade**, acionado por `/quality-check <arquivo>`. Ele encadeia três subagentes e **itera** até os testes passarem (máx 10 ciclos):
+Há dois fluxos principais, ambos compostos pelos mesmos subagentes base.
+
+### Pipeline iterativo (um arquivo)
+
+Acionado por `/quality-check <arquivo>`. Encadeia três subagentes e **itera** até os testes passarem (máx 10 ciclos):
 
 ```
 /quality-check arquivo.py
@@ -25,6 +29,25 @@ O fluxo principal é o **pipeline de qualidade**, acionado por `/quality-check <
 
 A partir do ciclo 2, o reviewer recebe o output das falhas do ciclo anterior pra focar no que ainda quebra.
 
+### Varredura de não comitados (vários arquivos)
+
+Acionado por `/code-review` (sem argumento). Adiciona uma fase de triagem antes do loop:
+
+```
+/code-review
+    │
+    ├── Fase 0 — change-scout (Bash, Read)
+    │     git status --porcelain → classifica cada mudança
+    │     em: Revisar (Python) | Revisar (outro) | Ignorar
+    │
+    └── Fase 1 — para cada arquivo "Revisar", uma passada:
+          ├── code-reviewer
+          ├── code-fixer        (só se reviewer apontou problemas)
+          └── test-runner       (só nos .py)
+```
+
+Não itera por arquivo — uma passada e segue para o próximo. Se quiser iterar em um caso específico, use `/quality-check <arquivo>` depois.
+
 Princípios que regem essa estrutura — e que você deve preservar ao mexer:
 
 1. **Cada subagente tem ferramentas mínimas.** O `code-reviewer` não tem `Edit` de propósito: revisão e correção são fases separadas pra que a revisão não "consert" sem deixar rastro. Se você der `Edit` ao reviewer, o pipeline perde a auditabilidade.
@@ -35,7 +58,8 @@ Princípios que regem essa estrutura — e que você deve preservar ao mexer:
 
 | Comando | O que faz |
 |---------|-----------|
-| `/quality-check <arquivo>` | Pipeline completo: revisa → corrige → testa. Itera até passar (máx 10 ciclos). |
+| `/quality-check <arquivo>` | Pipeline completo num arquivo: revisa → corrige → testa. Itera até passar (máx 10 ciclos). |
+| `/code-review` | Descobre arquivos não comitados via `change-scout` e roda review + fix em cada um (test-runner só nos `.py`). Uma passada por arquivo, sem loop. |
 | `/review <arquivo>` | Só revisa, não modifica nada |
 | `/explain <arquivo>` | Explica o código em português, sem mexer |
 | `/document <arquivo>` | Adiciona docstrings via `docs-writer` |
@@ -52,6 +76,7 @@ Definições em [.claude/agents/](.claude/agents/). Frontmatter YAML especifica 
 | `code-fixer` | Read, Edit, Write | Pra aplicar correções já identificadas |
 | `test-runner` | Read, Bash | Pra validar mudanças com pytest |
 | `docs-writer` | Read, Edit | Pra adicionar docstrings sem mexer em lógica |
+| `change-scout` | Read, Bash | Pra descobrir o que vale revisar no `git status` (filtra binários, lockfiles, gerados) |
 
 ## Hooks configurados
 
@@ -73,8 +98,11 @@ Os arquivos em `examples/` são propositalmente problemáticos:
 Fluxo sugerido pra praticar:
 ```
 /review examples/buggy_calculator.py       # vê o que reviewer aponta
-/quality-check examples/buggy_calculator.py # pipeline completo
+/quality-check examples/buggy_calculator.py # pipeline completo num arquivo
 /document examples/messy_data.py            # docs-writer em ação
+
+# modifique algum arquivo em examples/ sem comitar e:
+/code-review                                # scout descobre + pipeline em todos
 ```
 
 ## Convenções ao estender
